@@ -10,7 +10,6 @@ import com.row49382.service.JsonService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
@@ -25,9 +24,6 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class JacksonServiceTest {
-
-    @Mock
-    private ObjectMapper objectMapper;
 
     private JsonService jsonService;
 

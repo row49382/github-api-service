@@ -28,7 +28,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(JsonDeserializationException.class)
-    @ResponseStatus(value = HttpStatus.BAD_REQUEST, reason = "Unable to deserialize response from json api. Check the username in the request")
+    @ResponseStatus(value = HttpStatus.BAD_REQUEST, reason = "Unable to deserialize response.")
     public ResponseEntity<ErrorResponse> handleJsonDeserializationFailure(JsonDeserializationException ex) {
         return new ResponseEntity<>(
                 new ErrorResponse(HttpStatus.BAD_REQUEST.value(), ex.getMessage()), HttpStatus.BAD_REQUEST);
