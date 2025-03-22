@@ -9,11 +9,16 @@ import com.row49382.exception.JsonDeserializationException;
 import com.row49382.mapper.BiMapper;
 import com.row49382.service.JsonService;
 import com.row49382.test_util.ExpectedTestJson;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.cache.CacheManager;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.IOException;
 import java.net.http.HttpClient;
@@ -22,13 +27,11 @@ import java.net.http.HttpResponse;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
-@SpringBootTest(properties = {
-        "github-api-url=https://api.github.com",
-        "github-user-agent=test-user-agent"
-})
+@SpringBootTest
+@ExtendWith(MockitoExtension.class)
 class CachingGithubUserApiServiceTest {
     private static final String VALID_USERNAME = "valid";
     private static final String INVALID_USERNAME = "invalid";
@@ -36,27 +39,38 @@ class CachingGithubUserApiServiceTest {
     private static final String GITHUB_USER_REPO_ENDPOINT_TEMPLATE = GITHUB_USER_ENDPOINT_TEMPLATE + "/repos";
 
     @Autowired
-    private CacheManager cacheManager;
-
-    @Autowired
     private JsonService jsonService;
 
     @Autowired
     private BiMapper<GithubUserResponse, List<GithubUserRepoResponse>, GithubUserAggregatedResponse> responseMapper;
 
-    @MockitoBean
+    @Mock
     private HttpClient client;
 
-    @Autowired
     private CachingGithubUserApiService githubUserApiService;
+
+    @BeforeEach
+    public void setup() {
+        this.githubUserApiService =
+                new CachingGithubUserApiService(this.client, this.jsonService, this.responseMapper);
+
+        ReflectionTestUtils.setField(this.githubUserApiService, "githubUrl", "https://api.github.com");
+        ReflectionTestUtils.setField(this.githubUserApiService, "githubUserAgent", "test-user-agent");
+    }
 
     @Test
     void verifyGithubUsernameFetchSuccess() throws GithubUserFetchException, JsonDeserializationException, IOException, InterruptedException {
-        this.mockGithubUserValidRequest();
-        this.mockGithubUserRepoValidRequest();
+        HttpResponse<String> githubUserResponse = this.mockGithubUserValidResponse();
+        HttpResponse<String> githubUserRepoResponse = this.mockGithubUserRepoValidResponse();
 
         GithubUserAggregatedResponse githubUserAggregatedResponse =
                 this.githubUserApiService.fetchByUsername(VALID_USERNAME);
+
+        verify(githubUserResponse).statusCode();
+        verify(githubUserResponse).body();
+        verify(githubUserRepoResponse).statusCode();
+        verify(githubUserResponse).body();
+        verify(this.client, times(2)).send(any(HttpRequest.class), eq(HttpResponse.BodyHandlers.ofString()));
 
         assertNotNull(githubUserAggregatedResponse);
         assertEquals("octocat", githubUserAggregatedResponse.getUsername());
@@ -80,64 +94,74 @@ class CachingGithubUserApiServiceTest {
     }
 
     @Test
-    void verifyWhenGithubUsernameProvidedMoreThanOnceSameObjectIsReturned() throws IOException, InterruptedException, GithubUserFetchException, JsonDeserializationException {
-        this.mockGithubUserValidRequest();
-        this.mockGithubUserRepoValidRequest();
-
-        GithubUserAggregatedResponse originalResponse =
-                this.githubUserApiService.fetchByUsername(VALID_USERNAME);
-
-        GithubUserAggregatedResponse cachedResponse =
-                this.githubUserApiService.fetchByUsername(VALID_USERNAME);
-
-        assertEquals(originalResponse, cachedResponse);
-    }
-
-    @Test
     void verifyWhenGithubUsernameNotFoundThenFetchExceptionIsThrown() throws IOException, InterruptedException {
-        this.mockGithubUserNotFoundRequest();
-        this.mockGithubUserRepoValidRequest();
+        HttpResponse<String> githubUserResponse = this.mockGithubUserNotFoundResponse();
 
         assertThrows(
                 GithubUserFetchException.class,
                 () -> this.githubUserApiService.fetchByUsername(INVALID_USERNAME));
+
+        verify(githubUserResponse).statusCode();
+        verify(githubUserResponse, never()).body();
+        verify(this.client).send(any(HttpRequest.class), eq(HttpResponse.BodyHandlers.ofString()));
     }
 
     @Test
     void verifyWhenGithubUsernameResponseInvalidJsonThenDeserializationExceptionIsThrown() throws IOException, InterruptedException {
-        this.mockGithubUserResponseNotValidJsonRequest();
-        this.mockGithubUserRepoValidRequest();
+        HttpResponse<String> githubUserResponse = this.mockGithubUserResponseNotValidJsonResponse();
 
         assertThrows(
                 JsonDeserializationException.class,
                 () -> this.githubUserApiService.fetchByUsername(VALID_USERNAME));
+
+        verify(githubUserResponse).statusCode();
+        verify(githubUserResponse).body();
+        verify(this.client).send(any(HttpRequest.class), eq(HttpResponse.BodyHandlers.ofString()));
     }
 
-    private void mockGithubUserValidRequest() throws IOException, InterruptedException {
-        this.mockRequest(GITHUB_USER_ENDPOINT_TEMPLATE, ExpectedTestJson.GITHUB_USER_RESPONSE_JSON, VALID_USERNAME, 200);
+    @ParameterizedTest
+    @ValueSource(classes = {
+            InterruptedException.class,
+            IOException.class
+    })
+    void verifyWhenHttpClientThrowsExceptionThenFetchExceptionIsThrown(Class<Throwable> httpClientException) throws IOException, InterruptedException {
+        when(this.client.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenThrow(httpClientException);
+
+        assertThrows(
+                GithubUserFetchException.class,
+                () -> this.githubUserApiService.fetchByUsername(""));
+
+        verify(this.client).send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
     }
 
-    private void mockGithubUserRepoValidRequest() throws IOException, InterruptedException {
-        this.mockRequest(GITHUB_USER_REPO_ENDPOINT_TEMPLATE, ExpectedTestJson.GITHUB_USER_REPO_LIST_JSON, VALID_USERNAME, 200);
+    private HttpResponse<String> mockGithubUserValidResponse() throws IOException, InterruptedException {
+        return this.mockClientResponse(GITHUB_USER_ENDPOINT_TEMPLATE, ExpectedTestJson.GITHUB_USER_RESPONSE_JSON, VALID_USERNAME, 200);
     }
 
-    private void mockGithubUserNotFoundRequest() throws IOException, InterruptedException {
-        this.mockRequest(GITHUB_USER_ENDPOINT_TEMPLATE, ExpectedTestJson.GITHUB_USER_RESPONSE_JSON, INVALID_USERNAME, 404);
+    private HttpResponse<String> mockGithubUserRepoValidResponse() throws IOException, InterruptedException {
+        return this.mockClientResponse(GITHUB_USER_REPO_ENDPOINT_TEMPLATE, ExpectedTestJson.GITHUB_USER_REPO_LIST_JSON, VALID_USERNAME, 200);
     }
 
-    private void mockGithubUserResponseNotValidJsonRequest() throws IOException, InterruptedException {
-        this.mockRequest(GITHUB_USER_ENDPOINT_TEMPLATE, "invalid_json", VALID_USERNAME, 200);
+    private HttpResponse<String> mockGithubUserNotFoundResponse() throws IOException, InterruptedException {
+        return this.mockClientResponse(GITHUB_USER_ENDPOINT_TEMPLATE, ExpectedTestJson.GITHUB_USER_RESPONSE_JSON, INVALID_USERNAME, 404);
     }
 
-    private void mockRequest(String endpoint, String expectedResponse, String username, int statusCode) throws IOException, InterruptedException {
-        HttpResponse<String> githubUserResponse = mock(HttpResponse.class);
-        when(githubUserResponse.statusCode()).thenReturn(statusCode);
-        when(githubUserResponse.body()).thenReturn(expectedResponse);
+    private HttpResponse<String> mockGithubUserResponseNotValidJsonResponse() throws IOException, InterruptedException {
+        return this.mockClientResponse(GITHUB_USER_ENDPOINT_TEMPLATE, "invalid_json", VALID_USERNAME, 200);
+    }
+
+    private HttpResponse<String> mockClientResponse(String endpoint, String expectedResponse, String username, int statusCode) throws IOException, InterruptedException {
+        HttpResponse<String> response = mock(HttpResponse.class);
+        lenient().when(response.statusCode()).thenReturn(statusCode);
+        lenient().when(response.body()).thenReturn(expectedResponse);
 
         HttpRequest githubUserRequest =
                 this.githubUserApiService.buildRequest(endpoint.formatted(username));
 
         when(this.client.send(githubUserRequest, HttpResponse.BodyHandlers.ofString()))
-                .thenReturn(githubUserResponse);
+                .thenReturn(response);
+
+        return response;
     }
 }

@@ -2,7 +2,6 @@ package com.row49382.controller;
 
 import com.row49382.domain.dto.github.response.GithubUserAggregatedResponse;
 import com.row49382.domain.dto.github.response.GithubUserRepositoryResponse;
-import com.row49382.exception.JsonDeserializationException;
 import com.row49382.service.JsonService;
 import com.row49382.test_util.ExpectedTestJson;
 import org.junit.jupiter.api.Test;
@@ -55,16 +54,18 @@ class GithubUserControllerTest {
             GithubUserRepositoryResponse expectedRepo = expected.getRepos().get(i);
             GithubUserRepositoryResponse actualRepo = actual.getRepos().get(i);
 
-            assertEquals(expectedRepo.getName(), actualRepo.getUrl());
+            assertEquals(expectedRepo.getName(), actualRepo.getName());
             assertEquals(expectedRepo.getUrl(), actualRepo.getUrl());
         }
 
     }
 
-    @Test
-    void verifyInvalidUsernameProvidedReturnsBadRequest() throws Exception {
-        String invalidUsername = "<script></script>";
-
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "",
+            "<script></script>"
+    })
+    void verifyInvalidUsernameProvidedReturnsBadRequest(String invalidUsername) throws Exception {
         this.mvc.perform(MockMvcRequestBuilders.get("/api/github/users?username=%s".formatted(invalidUsername))
                 .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest());
