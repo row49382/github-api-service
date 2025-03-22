@@ -1,6 +1,9 @@
 name: Java CICD
 
-on: [push]
+on:
+  pull_request:
+    branches:
+      - 'main'
 
 jobs:
   build:
