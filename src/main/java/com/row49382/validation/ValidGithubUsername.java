@@ -7,10 +7,10 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-@Constraint(validatedBy = { NoHtmlValidator.class })
+@Constraint(validatedBy = { GithubUsernameValidator.class })
 @Target({ ElementType.FIELD, ElementType.PARAMETER })
 @Retention(RetentionPolicy.RUNTIME)
-public @interface NoHtml {
+public @interface ValidGithubUsername {
     String message() default "HTML content is not allowed";
     Class<?>[] groups() default {};
     Class<? extends Payload>[] payload() default {};

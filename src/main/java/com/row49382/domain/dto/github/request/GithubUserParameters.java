@@ -1,11 +1,11 @@
 package com.row49382.domain.dto.github.request;
 
-import com.row49382.validation.NoHtml;
+import com.row49382.validation.ValidGithubUsername;
 import jakarta.validation.constraints.NotEmpty;
 
 public class GithubUserParameters {
     @NotEmpty(message = "username can not be empty")
-    @NoHtml
+    @ValidGithubUsername
     private String username;
 
     public String getUsername() {
