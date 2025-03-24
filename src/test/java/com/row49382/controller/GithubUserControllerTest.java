@@ -63,7 +63,13 @@ class GithubUserControllerTest {
     @ParameterizedTest
     @ValueSource(strings = {
             "",
-            "<script></script>"
+            "<script></script>",
+            "-octocat",
+            "octocat-",
+            "-octocat-",
+            "octo--cat",
+            "!@#$%^&*()_-+=|\\<>/,.",
+            "longerthan39charactersssssssssssssssssss"
     })
     void verifyInvalidUsernameProvidedReturnsBadRequest(String invalidUsername) throws Exception {
         this.mvc.perform(MockMvcRequestBuilders.get("/api/github/users?username=%s".formatted(invalidUsername))
