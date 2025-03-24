@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
 @Target({ ElementType.FIELD, ElementType.PARAMETER })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ValidGithubUsername {
-    String message() default "HTML content is not allowed";
+    String message() default "Not a valid GitHub username";
     Class<?>[] groups() default {};
     Class<? extends Payload>[] payload() default {};
 }
