@@ -31,13 +31,15 @@ public class GithubUserAndRepoResponseToDTOMapper
         response.setUrl(githubUserResponse.getHtmlUrl());
         response.setCreatedAt(githubUserResponse.getCreatedAt());
 
-        for (GithubUserRepoResponse repoResponse : githubUserRepoResponses) {
-            GithubUserRepositoryResponse githubRepository = new GithubUserRepositoryResponse();
+        if (githubUserRepoResponses != null) {
+            for (GithubUserRepoResponse repoResponse : githubUserRepoResponses) {
+                GithubUserRepositoryResponse githubRepository = new GithubUserRepositoryResponse();
 
-            githubRepository.setName(repoResponse.getName());
-            githubRepository.setUrl(repoResponse.getHtmlUrl());
+                githubRepository.setName(repoResponse.getName());
+                githubRepository.setUrl(repoResponse.getHtmlUrl());
 
-            response.addRepository(githubRepository);
+                response.addRepository(githubRepository);
+            }
         }
 
         return response;
