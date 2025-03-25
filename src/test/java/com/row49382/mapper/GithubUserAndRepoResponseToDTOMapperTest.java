@@ -62,4 +62,22 @@ class GithubUserAndRepoResponseToDTOMapperTest {
 
         assertNull(actual);
     }
+
+    @Test
+    void verifyRepoResultsNullWhenGithubUserRepoListResponseIsNull() throws JsonDeserializationException {
+        GithubUserResponse expectedGithubUserResponse =
+                this.jsonService.deserialize(ExpectedTestJson.GITHUB_USER_RESPONSE_JSON, GithubUserResponse.class);
+        List<GithubUserRepoResponse> expectedGithubUserRepoResponse = null;
+
+        GithubUserAggregatedResponse actual = this.mapper.map(expectedGithubUserResponse, expectedGithubUserRepoResponse);
+
+        assertEquals(expectedGithubUserResponse.getLogin(), actual.getUsername());
+        assertEquals(expectedGithubUserResponse.getName(), actual.getDisplayName());
+        assertEquals(expectedGithubUserResponse.getAvatarUrl(), actual.getAvatar());
+        assertEquals(expectedGithubUserResponse.getLocation(), actual.getGeoLocation());
+        assertEquals(expectedGithubUserResponse.getEmail(), actual.getEmail());
+        assertEquals(expectedGithubUserResponse.getHtmlUrl(), actual.getUrl());
+        assertEquals(expectedGithubUserResponse.getCreatedAt(), actual.getCreatedAt());
+        assertNull(actual.getRepos());
+    }
 }
