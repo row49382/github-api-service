@@ -2,7 +2,7 @@ package com.row49382.exception;
 
 import java.io.Serial;
 
-public class JsonDeserializationException extends Exception {
+public class JsonDeserializationException extends RuntimeException {
     @Serial
     private static final long serialVersionUID = -8600953961212069671L;
 

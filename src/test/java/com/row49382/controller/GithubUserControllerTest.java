@@ -20,7 +20,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties = {
         "github-api-url=https://api.github.com",
-        "github-user-agent=test-user-agent"
+        "github-user-agent=test-user-agent",
+        "handle-async=false"
 })
 @AutoConfigureMockMvc
 class GithubUserControllerTest {

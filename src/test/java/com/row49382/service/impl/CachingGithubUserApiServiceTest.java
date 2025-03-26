@@ -2,29 +2,22 @@ package com.row49382.service.impl;
 
 import com.row49382.domain.dto.github.response.GithubUserRepositoryResponse;
 import com.row49382.domain.dto.github.response.GithubUserAggregatedResponse;
-import com.row49382.domain.third_party.github.dto.GithubUserRepoResponse;
-import com.row49382.domain.third_party.github.dto.GithubUserResponse;
 import com.row49382.exception.GithubUserFetchException;
 import com.row49382.exception.JsonDeserializationException;
-import com.row49382.mapper.BiMapper;
-import com.row49382.service.JsonService;
 import com.row49382.test_util.ExpectedTestJson;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.IOException;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -32,34 +25,16 @@ import static org.mockito.Mockito.*;
 
 @SpringBootTest
 @ExtendWith(MockitoExtension.class)
-class CachingGithubUserApiServiceTest {
-    private static final String VALID_USERNAME = "valid";
-    private static final String INVALID_USERNAME = "invalid";
-    private static final String GITHUB_USER_ENDPOINT_TEMPLATE = "/users/%s";
-    private static final String GITHUB_USER_REPO_ENDPOINT_TEMPLATE = GITHUB_USER_ENDPOINT_TEMPLATE + "/repos";
-
-    @Autowired
-    private JsonService jsonService;
-
-    @Autowired
-    private BiMapper<GithubUserResponse, List<GithubUserRepoResponse>, GithubUserAggregatedResponse> responseMapper;
-
-    @Mock
-    private HttpClient client;
-
-    private CachingGithubUserApiService githubUserApiService;
+class CachingGithubUserApiServiceTest extends AbstractGithubUserApiServiceTest {
 
     @BeforeEach
     public void setup() {
         this.githubUserApiService =
-                new CachingGithubUserApiService(this.client, this.jsonService, this.responseMapper);
-
-        ReflectionTestUtils.setField(this.githubUserApiService, "githubUrl", "https://api.github.com");
-        ReflectionTestUtils.setField(this.githubUserApiService, "githubUserAgent", "test-user-agent");
+                new CachingGithubUserApiService(this.client, this.jsonService, this.responseMapper, this.requestFactory);
     }
 
     @Test
-    void verifyGithubUsernameFetchSuccess() throws GithubUserFetchException, JsonDeserializationException, IOException, InterruptedException {
+    void verifyGithubUsernameFetchSuccess() throws Throwable {
         HttpResponse<String> githubUserResponse = this.mockGithubUserValidResponse();
         HttpResponse<String> githubUserRepoResponse = this.mockGithubUserRepoValidResponse();
 
@@ -135,29 +110,30 @@ class CachingGithubUserApiServiceTest {
         verify(this.client).send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
     }
 
-    private HttpResponse<String> mockGithubUserValidResponse() throws IOException, InterruptedException {
+    protected HttpResponse<String> mockGithubUserValidResponse() throws IOException, InterruptedException {
         return this.mockClientResponse(GITHUB_USER_ENDPOINT_TEMPLATE, ExpectedTestJson.GITHUB_USER_RESPONSE_JSON, VALID_USERNAME, 200);
     }
 
-    private HttpResponse<String> mockGithubUserRepoValidResponse() throws IOException, InterruptedException {
+    protected HttpResponse<String> mockGithubUserRepoValidResponse() throws IOException, InterruptedException {
         return this.mockClientResponse(GITHUB_USER_REPO_ENDPOINT_TEMPLATE, ExpectedTestJson.GITHUB_USER_REPO_LIST_JSON, VALID_USERNAME, 200);
     }
 
-    private HttpResponse<String> mockGithubUserNotFoundResponse() throws IOException, InterruptedException {
-        return this.mockClientResponse(GITHUB_USER_ENDPOINT_TEMPLATE, ExpectedTestJson.GITHUB_USER_RESPONSE_JSON, INVALID_USERNAME, 404);
+    protected HttpResponse<String> mockGithubUserNotFoundResponse() throws IOException, InterruptedException {
+        return this.mockClientResponse(GITHUB_USER_ENDPOINT_TEMPLATE, ExpectedTestJson.GITHUB_USER_RESPONSE_JSON, INVALID_USERNAME, 500);
     }
 
-    private HttpResponse<String> mockGithubUserResponseNotValidJsonResponse() throws IOException, InterruptedException {
+    protected HttpResponse<String> mockGithubUserResponseNotValidJsonResponse() throws IOException, InterruptedException {
         return this.mockClientResponse(GITHUB_USER_ENDPOINT_TEMPLATE, "invalid_json", VALID_USERNAME, 200);
     }
 
-    private HttpResponse<String> mockClientResponse(String endpoint, String expectedResponse, String username, int statusCode) throws IOException, InterruptedException {
+    protected HttpResponse<String> mockClientResponse(String endpoint, String expectedResponse, String username, int statusCode)
+            throws IOException, InterruptedException {
         HttpResponse<String> response = mock(HttpResponse.class);
         lenient().when(response.statusCode()).thenReturn(statusCode);
         lenient().when(response.body()).thenReturn(expectedResponse);
 
         HttpRequest githubUserRequest =
-                this.githubUserApiService.buildRequest(endpoint.formatted(username));
+                this.requestFactory.buildRequest(endpoint.formatted(username));
 
         when(this.client.send(githubUserRequest, HttpResponse.BodyHandlers.ofString()))
                 .thenReturn(response);

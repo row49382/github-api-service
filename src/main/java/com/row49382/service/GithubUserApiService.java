@@ -5,5 +5,5 @@ import com.row49382.exception.GithubUserFetchException;
 import com.row49382.exception.JsonDeserializationException;
 
 public interface GithubUserApiService {
-    GithubUserAggregatedResponse fetchByUsername(String username) throws GithubUserFetchException, JsonDeserializationException;
+    GithubUserAggregatedResponse fetchByUsername(String username) throws Throwable;
 }

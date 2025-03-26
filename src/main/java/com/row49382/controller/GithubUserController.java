@@ -22,7 +22,7 @@ public class GithubUserController {
 
     @GetMapping
     public ResponseEntity<GithubUserAggregatedResponse> getGithubUser(@Valid GithubUserParameters params)
-            throws GithubUserFetchException, JsonDeserializationException {
+            throws Throwable {
         return ResponseEntity.ofNullable(
                 this.githubUserApiService.fetchByUsername(params.getUsername()));
     }

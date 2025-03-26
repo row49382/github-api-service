@@ -2,7 +2,7 @@ package com.row49382.exception;
 
 import java.io.Serial;
 
-public class GithubUserFetchException extends Exception {
+public class GithubUserFetchException extends RuntimeException {
     @Serial
     private static final long serialVersionUID = -278156538044821175L;
 
