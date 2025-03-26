@@ -5,7 +5,6 @@ import com.row49382.domain.dto.github.response.GithubUserAggregatedResponse;
 import com.row49382.domain.third_party.github.dto.GithubUserRepoResponse;
 import com.row49382.domain.third_party.github.dto.GithubUserResponse;
 import com.row49382.exception.GithubUserFetchException;
-import com.row49382.exception.JsonDeserializationException;
 import com.row49382.mapper.BiMapper;
 import com.row49382.service.AbstractGithubUserApiService;
 import com.row49382.service.AsyncHandler;
@@ -61,8 +60,8 @@ public class AsyncCachingGithubUserService extends AbstractGithubUserApiService 
             throw new GithubUserFetchException("failed to resolve async calls in time", e);
         } catch (ExecutionException e) {
             if (e.getCause() != null) {
-                throw e.getCause();
-            };
+                throw new Exception(e.getCause());
+            }
 
             throw e;
         }

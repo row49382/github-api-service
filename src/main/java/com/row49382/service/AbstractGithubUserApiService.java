@@ -6,7 +6,6 @@ import com.row49382.domain.third_party.github.dto.GithubUserResponse;
 import com.row49382.exception.GithubUserFetchException;
 import com.row49382.mapper.BiMapper;
 import com.row49382.service.impl.GitHubUserHttpClientRequestFactory;
-import org.springframework.boot.autoconfigure.info.ProjectInfoProperties;
 
 import java.io.IOException;
 import java.net.http.HttpClient;

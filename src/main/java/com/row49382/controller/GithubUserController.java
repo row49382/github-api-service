@@ -2,8 +2,6 @@ package com.row49382.controller;
 
 import com.row49382.domain.dto.github.request.GithubUserParameters;
 import com.row49382.domain.dto.github.response.GithubUserAggregatedResponse;
-import com.row49382.exception.GithubUserFetchException;
-import com.row49382.exception.JsonDeserializationException;
 import com.row49382.service.GithubUserApiService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;

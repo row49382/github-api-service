@@ -14,16 +14,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import java.io.IOException;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -151,28 +147,27 @@ class AsyncCachingGithubUserServiceTest extends AbstractGithubUserApiServiceTest
         );
     }
 
-    protected CompletableFuture<HttpResponse<String>> mockGithubUserValidResponseAsync() throws InterruptedException, ExecutionException {
+    protected CompletableFuture<HttpResponse<String>> mockGithubUserValidResponseAsync() {
         return this.mockClientResponseAsync(GITHUB_USER_ENDPOINT_TEMPLATE, ExpectedTestJson.GITHUB_USER_RESPONSE_JSON, VALID_USERNAME, 200);
     }
 
-    protected CompletableFuture<HttpResponse<String>> mockGithubUserRepoValidResponseAsync() throws InterruptedException, ExecutionException {
+    protected CompletableFuture<HttpResponse<String>> mockGithubUserRepoValidResponseAsync() {
         return this.mockClientResponseAsync(GITHUB_USER_REPO_ENDPOINT_TEMPLATE, ExpectedTestJson.GITHUB_USER_REPO_LIST_JSON, VALID_USERNAME, 200);
     }
 
-    protected CompletableFuture<HttpResponse<String>> mockGithubUserRepoNotFoundResponseAsync() throws InterruptedException, ExecutionException {
+    protected CompletableFuture<HttpResponse<String>> mockGithubUserRepoNotFoundResponseAsync() {
         return this.mockClientResponseAsync(GITHUB_USER_REPO_ENDPOINT_TEMPLATE, ExpectedTestJson.GITHUB_USER_REPO_LIST_JSON, INVALID_USERNAME, 500);
     }
 
-    protected CompletableFuture<HttpResponse<String>> mockGithubUserNotFoundResponseAsync() throws InterruptedException, ExecutionException {
+    protected CompletableFuture<HttpResponse<String>> mockGithubUserNotFoundResponseAsync() {
         return this.mockClientResponseAsync(GITHUB_USER_ENDPOINT_TEMPLATE, ExpectedTestJson.GITHUB_USER_RESPONSE_JSON, INVALID_USERNAME, 500);
     }
 
-    protected CompletableFuture<HttpResponse<String>> mockGithubUserResponseNotValidJsonResponseAsync() throws InterruptedException, ExecutionException {
+    protected CompletableFuture<HttpResponse<String>> mockGithubUserResponseNotValidJsonResponseAsync() {
         return this.mockClientResponseAsync(GITHUB_USER_ENDPOINT_TEMPLATE, "invalid_json", VALID_USERNAME, 200);
     }
 
-    protected CompletableFuture<HttpResponse<String>> mockClientResponseAsync(String endpoint, String expectedResponse, String username, int statusCode)
-            throws ExecutionException, InterruptedException {
+    protected CompletableFuture<HttpResponse<String>> mockClientResponseAsync(String endpoint, String expectedResponse, String username, int statusCode) {
         HttpResponse<String> response = mock(HttpResponse.class);
         CompletableFuture<HttpResponse<String>> future = CompletableFuture.completedFuture(response);
 
