@@ -35,9 +35,9 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(GithubUserFetchException.class)
-    @ResponseStatus(value = HttpStatus.NOT_FOUND, reason = "Unable to fetch github user")
+    @ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR, reason = "Unable to fetch github user")
     public ResponseEntity<ErrorResponse> handleGithubUserFetchFailure(GithubUserFetchException ex) {
         return ResponseEntity.ofNullable(
-                new ErrorResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage()));
+                new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), ex.getMessage()));
     }
 }

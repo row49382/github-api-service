@@ -7,48 +7,30 @@ import com.row49382.domain.third_party.github.dto.GithubUserResponse;
 import com.row49382.exception.GithubUserFetchException;
 import com.row49382.exception.JsonDeserializationException;
 import com.row49382.mapper.BiMapper;
-import com.row49382.service.GithubUserApiService;
+import com.row49382.service.AbstractGithubUserApiService;
 import com.row49382.service.JsonService;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
-import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
 
 @Service
-public class CachingGithubUserApiService implements GithubUserApiService {
-    private static final String GITHUB_USER_ENDPOINT_TEMPLATE = "/users/%s";
-    private static final String GITHUB_USER_REPO_ENDPOINT_TEMPLATE = GITHUB_USER_ENDPOINT_TEMPLATE + "/repos";
-    private static final String GITHUB_USER_FETCH_ERROR_TEMPLATE = "Failed to fetch user information with request %s";
-
-    private final HttpClient client;
-    private final JsonService jsonService;
-    private final BiMapper<GithubUserResponse, List<GithubUserRepoResponse>, GithubUserAggregatedResponse> responseMapper;
-
-    @Value("${github-api-url}")
-    private String githubUrl;
-
-    @Value("${github-user-agent}")
-    private String githubUserAgent;
+public class CachingGithubUserApiService extends AbstractGithubUserApiService {
 
     public CachingGithubUserApiService(
             HttpClient client,
             JsonService jsonService,
-            BiMapper<GithubUserResponse, List<GithubUserRepoResponse>, GithubUserAggregatedResponse> responseMapper) {
-        this.client = client;
-        this.jsonService = jsonService;
-        this.responseMapper = responseMapper;
+            BiMapper<GithubUserResponse, List<GithubUserRepoResponse>, GithubUserAggregatedResponse> responseMapper,
+            GitHubUserHttpClientRequestFactory requestFactory) {
+        super(client, jsonService, responseMapper, requestFactory);
     }
 
     @Override
     @Cacheable(value = CacheConfig.GITHUB_USER_CACHE)
-    public GithubUserAggregatedResponse fetchByUsername(String username)
-            throws JsonDeserializationException, GithubUserFetchException {
+    public GithubUserAggregatedResponse fetchByUsername(String username) {
         GithubUserResponse userResponse = this.getGithubUser(username);
         List<GithubUserRepoResponse> userRepoResponses = this.getGithubRepos(username);
 
@@ -58,7 +40,7 @@ public class CachingGithubUserApiService implements GithubUserApiService {
     private GithubUserResponse getGithubUser(String username)
             throws JsonDeserializationException, GithubUserFetchException {
         HttpRequest request =
-                this.buildRequest(GITHUB_USER_ENDPOINT_TEMPLATE.formatted(username));
+                this.requestFactory.buildRequest(GITHUB_USER_ENDPOINT_TEMPLATE.formatted(username));
 
         HttpResponse<String> response = this.tryClientCall(request);
         return this.jsonService.deserialize(response.body(), GithubUserResponse.class);
@@ -67,35 +49,9 @@ public class CachingGithubUserApiService implements GithubUserApiService {
     private List<GithubUserRepoResponse> getGithubRepos(String username)
             throws JsonDeserializationException, GithubUserFetchException {
         HttpRequest request =
-                this.buildRequest(GITHUB_USER_REPO_ENDPOINT_TEMPLATE.formatted(username));
+                this.requestFactory.buildRequest(GITHUB_USER_REPO_ENDPOINT_TEMPLATE.formatted(username));
 
         HttpResponse<String> response = this.tryClientCall(request);
         return this.jsonService.deserializeList(response.body(), GithubUserRepoResponse.class);
-    }
-
-    private HttpResponse<String> tryClientCall(HttpRequest request) throws GithubUserFetchException {
-        try {
-            HttpResponse<String> response = this.client.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() != 200) {
-                throw new GithubUserFetchException(GITHUB_USER_FETCH_ERROR_TEMPLATE.formatted(request));
-            }
-
-            return response;
-        } catch (InterruptedException ie) {
-            Thread.currentThread().interrupt();
-            throw new GithubUserFetchException(GITHUB_USER_FETCH_ERROR_TEMPLATE.formatted(request), ie);
-        } catch (IOException ioe) {
-            throw new GithubUserFetchException(GITHUB_USER_FETCH_ERROR_TEMPLATE.formatted(request), ioe);
-        }
-    }
-
-    HttpRequest buildRequest(String endpoint) {
-        return HttpRequest.newBuilder()
-                .uri(URI.create(this.githubUrl + endpoint))
-                .header("User-Agent", this.githubUserAgent)
-                .header("Accept", "application/vnd.github+json")
-                .header("X-Github-Api-Version", "2022-11-28")
-                .GET()
-                .build();
     }
 }
