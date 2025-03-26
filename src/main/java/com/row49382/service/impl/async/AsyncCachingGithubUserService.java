@@ -60,7 +60,7 @@ public class AsyncCachingGithubUserService extends AbstractGithubUserApiService 
             throw new GithubUserFetchException("failed to resolve async calls in time", e);
         } catch (ExecutionException e) {
             if (e.getCause() != null) {
-                throw new Exception(e.getCause());
+                throw e.getCause();
             }
 
             throw e;
