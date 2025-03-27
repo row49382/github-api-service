@@ -2,11 +2,14 @@ package com.row49382.service.impl;
 
 import com.row49382.domain.dto.github.response.GithubUserAggregatedResponse;
 import com.row49382.domain.dto.github.response.GithubUserRepositoryResponse;
+import com.row49382.domain.third_party.github.dto.GithubUserRepoResponse;
+import com.row49382.domain.third_party.github.dto.GithubUserResponse;
 import com.row49382.exception.GithubUserFetchException;
 import com.row49382.exception.JsonDeserializationException;
-import com.row49382.service.AsyncHandler;
+import com.row49382.service.AsyncRESTHandler;
 import com.row49382.service.impl.async.AsyncCachingGithubUserService;
 import com.row49382.service.impl.async.GithubUserAsyncClientHandler;
+import com.row49382.service.impl.async.GithubUserRepoAsyncClientHandler;
 import com.row49382.test_util.ExpectedTestJson;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,10 +20,14 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import java.net.URI;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -36,9 +43,13 @@ import static org.mockito.Mockito.verify;
 class AsyncCachingGithubUserServiceTest extends AbstractGithubUserApiServiceTest {
     @BeforeEach
     public void setup() {
-        AsyncHandler<String> asyncHandler = new GithubUserAsyncClientHandler(this.client, this.requestFactory);
+        AsyncRESTHandler<GithubUserResponse> asyncGithubUserHandler =
+                new GithubUserAsyncClientHandler(this.client, this.requestFactory, this.jsonService);
+        AsyncRESTHandler<List<GithubUserRepoResponse>> asyncGithubUserRepoHandler =
+                new GithubUserRepoAsyncClientHandler(this.client, this.requestFactory, this.jsonService);
+
         this.githubUserApiService =
-                new AsyncCachingGithubUserService(this.client, this.jsonService, this.responseMapper, this.requestFactory, asyncHandler);
+                new AsyncCachingGithubUserService(this.client, this.jsonService, this.responseMapper, this.requestFactory, asyncGithubUserHandler, asyncGithubUserRepoHandler);
     }
     @Test
     void verifyGithubUsernameFetchSuccessAsync() throws Throwable {
@@ -93,9 +104,9 @@ class AsyncCachingGithubUserServiceTest extends AbstractGithubUserApiServiceTest
         HttpResponse<String> expectedUserRepoResponse = githubUserRepoResponse.get();
 
         verify(expectedUserResponse).statusCode();
-        verify(expectedUserResponse).body();
-        verify(expectedUserRepoResponse, never()).statusCode();
-        verify(expectedUserRepoResponse, never()).body();
+        verify(expectedUserResponse).uri();
+        verify(expectedUserRepoResponse).statusCode();
+        verify(expectedUserRepoResponse).uri();
         verify(this.client, times(2)).sendAsync(any(HttpRequest.class), eq(HttpResponse.BodyHandlers.ofString()));
     }
 
@@ -116,7 +127,7 @@ class AsyncCachingGithubUserServiceTest extends AbstractGithubUserApiServiceTest
         verify(expectedUserResponse).statusCode();
         verify(expectedUserResponse).body();
         verify(expectedUserRepoResponse).statusCode();
-        verify(expectedUserRepoResponse, never()).body();
+        verify(expectedUserRepoResponse).body();
         verify(this.client, times(2)).sendAsync(any(HttpRequest.class), eq(HttpResponse.BodyHandlers.ofString()));
     }
 
@@ -124,12 +135,12 @@ class AsyncCachingGithubUserServiceTest extends AbstractGithubUserApiServiceTest
     @MethodSource("getFutureExceptions")
     void verifyWhenHttpClientThrowsExceptionThenFetchExceptionIsThrownAsync(Throwable futureException) throws InterruptedException, ExecutionException {
         CompletableFuture<HttpResponse<String>> future = mock(CompletableFuture.class);
-        lenient().when(future.thenCompose(any(Function.class))).thenReturn(future);
-        lenient().when(future.thenApply(any(Function.class))).thenReturn(future);
+        lenient().when(future.thenCombine(any(CompletionStage.class), any(BiFunction.class))).thenReturn(future);
 
         when(this.client.sendAsync(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
                 .thenReturn(future);
 
+        lenient().when(future.thenApply(any(Function.class))).thenReturn(future);
         when(future.get()).thenThrow(futureException);
 
         assertThrows(
@@ -173,6 +184,7 @@ class AsyncCachingGithubUserServiceTest extends AbstractGithubUserApiServiceTest
 
         lenient().when(response.statusCode()).thenReturn(statusCode);
         lenient().when(response.body()).thenReturn(expectedResponse);
+        lenient().when(response.uri()).thenReturn(URI.create("https://api.github.com"));
 
         HttpRequest githubUserRequest =
                 this.requestFactory.buildRequest(endpoint.formatted(username));
