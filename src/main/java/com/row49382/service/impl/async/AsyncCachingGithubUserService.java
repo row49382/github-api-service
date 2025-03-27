@@ -7,7 +7,7 @@ import com.row49382.domain.third_party.github.dto.GithubUserResponse;
 import com.row49382.exception.GithubUserFetchException;
 import com.row49382.mapper.BiMapper;
 import com.row49382.service.AbstractGithubUserApiService;
-import com.row49382.service.AsyncRESTHandler;
+import com.row49382.service.AbstractAsyncRESTHandler;
 import com.row49382.service.JsonService;
 import com.row49382.service.impl.GitHubUserHttpClientRequestFactory;
 import org.springframework.cache.annotation.Cacheable;
@@ -20,16 +20,16 @@ import java.util.concurrent.ExecutionException;
 
 @Service
 public class AsyncCachingGithubUserService extends AbstractGithubUserApiService {
-    private final AsyncRESTHandler<GithubUserResponse> asyncGithubUserHandler;
-    private final AsyncRESTHandler<List<GithubUserRepoResponse>> asyncGithubUserRepoHandler;
+    private final AbstractAsyncRESTHandler<GithubUserResponse> asyncGithubUserHandler;
+    private final AbstractAsyncRESTHandler<List<GithubUserRepoResponse>> asyncGithubUserRepoHandler;
 
     public AsyncCachingGithubUserService(
             HttpClient client,
             JsonService jsonService,
             BiMapper<GithubUserResponse, List<GithubUserRepoResponse>, GithubUserAggregatedResponse> responseMapper,
             GitHubUserHttpClientRequestFactory requestFactory,
-            AsyncRESTHandler<GithubUserResponse> asyncGithubUserHandler,
-            AsyncRESTHandler<List<GithubUserRepoResponse>> asyncGithubUserRepoHandler) {
+            AbstractAsyncRESTHandler<GithubUserResponse> asyncGithubUserHandler,
+            AbstractAsyncRESTHandler<List<GithubUserRepoResponse>> asyncGithubUserRepoHandler) {
         super(client, jsonService, responseMapper, requestFactory);
         this.asyncGithubUserHandler = asyncGithubUserHandler;
         this.asyncGithubUserRepoHandler = asyncGithubUserRepoHandler;
