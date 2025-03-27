@@ -9,18 +9,18 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.concurrent.CompletableFuture;
 
-public abstract class AsyncRESTHandler<T> {
+public abstract class AbstractAsyncRESTHandler<T> {
     protected final HttpClient client;
     protected final GitHubUserHttpClientRequestFactory requestFactory;
-    protected final JsonDeserializationStrategy<T> jsonDeserializationStrategy;
+    protected final JsonService jsonService;
 
-    protected AsyncRESTHandler(
+    protected AbstractAsyncRESTHandler(
             HttpClient client,
             GitHubUserHttpClientRequestFactory requestFactory,
-            JsonDeserializationStrategy<T> jsonDeserializationStrategy) {
+            JsonService jsonService) {
         this.client = client;
         this.requestFactory = requestFactory;
-        this.jsonDeserializationStrategy = jsonDeserializationStrategy;
+        this.jsonService = jsonService;
     }
 
     @Async
@@ -31,9 +31,11 @@ public abstract class AsyncRESTHandler<T> {
 
         return response.thenApply(res -> {
             this.verifySuccessfulResponse(res);
-            return this.jsonDeserializationStrategy.deserialize(res.body());
+            return this.deserializeResponse(res.body());
         });
     }
+
+    protected abstract T deserializeResponse(String body);
 
     protected void verifySuccessfulResponse(HttpResponse<?> response) {
         if (response.statusCode() != 200) {

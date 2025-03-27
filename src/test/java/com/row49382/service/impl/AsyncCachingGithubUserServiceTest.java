@@ -6,10 +6,10 @@ import com.row49382.domain.third_party.github.dto.GithubUserRepoResponse;
 import com.row49382.domain.third_party.github.dto.GithubUserResponse;
 import com.row49382.exception.GithubUserFetchException;
 import com.row49382.exception.JsonDeserializationException;
-import com.row49382.service.AsyncRESTHandler;
+import com.row49382.service.AbstractAsyncRESTHandler;
 import com.row49382.service.impl.async.AsyncCachingGithubUserService;
-import com.row49382.service.impl.async.GithubUserAsyncClientHandler;
-import com.row49382.service.impl.async.GithubUserRepoAsyncClientHandler;
+import com.row49382.service.impl.async.GithubUserAbstractAsyncClientHandler;
+import com.row49382.service.impl.async.GithubUserRepoAbstractAsyncClientHandler;
 import com.row49382.test_util.ExpectedTestJson;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,10 +43,10 @@ import static org.mockito.Mockito.verify;
 class AsyncCachingGithubUserServiceTest extends AbstractGithubUserApiServiceTest {
     @BeforeEach
     public void setup() {
-        AsyncRESTHandler<GithubUserResponse> asyncGithubUserHandler =
-                new GithubUserAsyncClientHandler(this.client, this.requestFactory, this.jsonService);
-        AsyncRESTHandler<List<GithubUserRepoResponse>> asyncGithubUserRepoHandler =
-                new GithubUserRepoAsyncClientHandler(this.client, this.requestFactory, this.jsonService);
+        AbstractAsyncRESTHandler<GithubUserResponse> asyncGithubUserHandler =
+                new GithubUserAbstractAsyncClientHandler(this.client, this.requestFactory, this.jsonService);
+        AbstractAsyncRESTHandler<List<GithubUserRepoResponse>> asyncGithubUserRepoHandler =
+                new GithubUserRepoAbstractAsyncClientHandler(this.client, this.requestFactory, this.jsonService);
 
         this.githubUserApiService =
                 new AsyncCachingGithubUserService(this.client, this.jsonService, this.responseMapper, this.requestFactory, asyncGithubUserHandler, asyncGithubUserRepoHandler);
